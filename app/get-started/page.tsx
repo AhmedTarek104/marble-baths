@@ -37,6 +37,8 @@ export default function GetStarted() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showOtherError, setShowOtherError] = useState(false);
+  const [showZipError, setShowZipError] = useState(false);
+  const [showPhoneError, setShowPhoneError] = useState(false);
   const [formData, setFormData] = useState({
     projectScope: [] as string[],
     projectScopeOther: '',
@@ -54,6 +56,10 @@ export default function GetStarted() {
     phone: '',
     consent: false
   });
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step]);
 
   useEffect(() => {
     window.history.replaceState({ step: 1 }, '', '?step=1');
@@ -117,7 +123,26 @@ export default function GetStarted() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (step === 5) {
+      const isValidZip = /^\d{5}(-\d{4})?$/.test(formData.zipCode.trim());
+      if (!isValidZip) {
+        setShowZipError(true);
+        return;
+      }
+      setShowZipError(false);
+    }
+
     if (step < 6) return nextStep();
+
+    if (step === 6) {
+      const isValidPhone = /^(?:\+1\s?)?(?:\(?\d{3}\)?[\\s.-]?)?\d{3}[\\s.-]?\d{4}$/.test(formData.phone.trim());
+      if (!isValidPhone) {
+        setShowPhoneError(true);
+        return;
+      }
+      setShowPhoneError(false);
+    }
 
     if (!formData.consent) {
       alert("Please accept the terms to continue.");
@@ -411,10 +436,18 @@ export default function GetStarted() {
                       type="text"
                       required
                       value={formData.zipCode}
-                      onChange={(e) => updateForm('zipCode', e.target.value)}
-                      className="w-full px-6 py-4 rounded-full border border-[#e8dfd8] outline-none focus:border-brand-primary focus:ring-4 focus:ring-[#ab9073]/20 bg-[#f9f5f2] focus:bg-white transition-all text-lg font-body text-brand-dark"
+                      onChange={(e) => {
+                        updateForm('zipCode', e.target.value);
+                        if (e.target.value.trim()) setShowZipError(false);
+                      }}
+                      className={`w-full px-6 py-4 rounded-full border outline-none focus:ring-4 transition-all text-lg font-body bg-[#f9f5f2] focus:bg-white ${showZipError ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10 text-brand-dark' : 'border-[#e8dfd8] focus:border-brand-primary focus:ring-[#ab9073]/20 text-brand-dark'}`}
                       placeholder="e.g. 90210"
                     />
+                    {showZipError && (
+                      <p className="text-red-500 text-sm font-body mt-2 animate-in fade-in slide-in-from-top-1 pl-4">
+                        Please enter a valid US ZIP code
+                      </p>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-6">
                     <div>
@@ -505,10 +538,18 @@ export default function GetStarted() {
                       type="tel"
                       required
                       value={formData.phone}
-                      onChange={(e) => updateForm('phone', e.target.value)}
-                      className="w-full px-6 py-4 rounded-full border border-[#e8dfd8] outline-none focus:border-brand-primary focus:ring-4 focus:ring-[#ab9073]/20 bg-[#f9f5f2] focus:bg-white transition-all text-lg font-body text-brand-dark"
+                      onChange={(e) => {
+                        updateForm('phone', e.target.value);
+                        if (e.target.value.trim()) setShowPhoneError(false);
+                      }}
+                      className={`w-full px-6 py-4 rounded-full border outline-none focus:ring-4 transition-all text-lg font-body bg-[#f9f5f2] focus:bg-white ${showPhoneError ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10 text-brand-dark' : 'border-[#e8dfd8] focus:border-brand-primary focus:ring-[#ab9073]/20 text-brand-dark'}`}
                       placeholder="Phone number"
                     />
+                    {showPhoneError && (
+                      <p className="text-red-500 text-sm font-body mt-2 animate-in fade-in slide-in-from-top-1 pl-4">
+                        Please enter a valid US phone number
+                      </p>
+                    )}
                   </div>
 
                   <div className="pt-6 pb-2">
