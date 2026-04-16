@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Home, Bath, DollarSign, Calendar, MapPin, User, ChevronRight, ChevronLeft, ShowerHead, LayoutGrid, Droplet, Box, Droplets, Layers, CheckCircle2, CheckCircle, Plus } from 'lucide-react';
 import Button from '@/components/Button';
@@ -38,7 +38,7 @@ export default function GetStarted() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showOtherError, setShowOtherError] = useState(false);
   const [formData, setFormData] = useState({
-    projectScope: '',
+    projectScope: [] as string[],
     projectScopeOther: '',
     propertyType: 'Single Family',
     ownProperty: 'Yes',
@@ -55,15 +55,59 @@ export default function GetStarted() {
     consent: false
   });
 
-  const updateForm = (key: string, value: string | boolean) => {
+  useEffect(() => {
+    window.history.replaceState({ step: 1 }, '', '?step=1');
+
+    const handlePopState = (e: PopStateEvent) => {
+      if (e.state && e.state.step) {
+        setStep(e.state.step);
+      } else {
+        setStep(1);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const updateForm = (key: string, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }));
   };
 
-  const nextStep = () => setStep(s => Math.min(6, s + 1));
-  const prevStep = () => setStep(s => Math.max(1, s - 1));
+  const updateStepUrl = (newStep: number) => {
+    window.history.pushState({ step: newStep }, '', `?step=${newStep}`);
+  };
+
+  const nextStep = () => {
+    setStep(s => {
+      const next = Math.min(6, s + 1);
+      if (next !== s) {
+        updateStepUrl(next);
+      }
+      return next;
+    });
+  };
+
+  const prevStep = () => {
+    window.history.back();
+  };
+
+  const handleScopeToggle = (label: string) => {
+    setFormData(prev => {
+      const current = prev.projectScope;
+      if (current.includes(label)) {
+        return { ...prev, projectScope: current.filter((item: string) => item !== label) };
+      } else {
+        return { ...prev, projectScope: [...current, label] };
+      }
+    });
+  };
 
   const handleStep1Next = () => {
-    if (formData.projectScope === 'Other' && !formData.projectScopeOther.trim()) {
+    if (formData.projectScope.length === 0) {
+      alert("Please select at least one option.");
+      return;
+    }
+    if (formData.projectScope.includes('Other') && !formData.projectScopeOther.trim()) {
       setShowOtherError(true);
       return;
     }
@@ -82,9 +126,9 @@ export default function GetStarted() {
 
     setIsSubmitting(true);
     try {
-      const payload = { ...formData };
-      if (payload.projectScope === 'Other' && payload.projectScopeOther) {
-        payload.projectScope = `Other: ${payload.projectScopeOther}`;
+      const payload: any = { ...formData };
+      if (payload.projectScope.includes('Other') && payload.projectScopeOther) {
+        payload.projectScope = payload.projectScope.map((s: string) => s === 'Other' ? `Other: ${payload.projectScopeOther}` : s);
       }
 
       const res = await fetch('/api/leads', {
@@ -141,34 +185,29 @@ export default function GetStarted() {
                     <button
                       key={label}
                       type="button"
-                      onClick={() => {
-                        updateForm('projectScope', label);
-                        if (label !== 'Other') {
-                          setTimeout(nextStep, 400);
-                        }
-                      }}
-                      className={`group relative py-8 px-4 rounded-xl border-2 text-center transition-all duration-300 flex flex-col items-center gap-5 ${formData.projectScope === label
+                      onClick={() => handleScopeToggle(label)}
+                      className={`group relative py-8 px-4 rounded-xl border-2 text-center transition-all duration-300 flex flex-col items-center gap-5 ${formData.projectScope.includes(label)
                           ? 'border-brand-primary bg-white shadow-lg ring-4 ring-[#ab9073]/20 scale-105'
                           : 'border-[#e8dfd8] bg-[#f9f5f2] hover:border-brand-primary hover:shadow-lg hover:bg-white hover:-translate-y-1'
                         }`}
                     >
-                      {formData.projectScope === label && (
+                      {formData.projectScope.includes(label) && (
                         <div className="absolute top-3 right-3 text-brand-primary animate-in zoom-in">
                           <CheckCircle2 className="w-5 h-5 fill-brand-primary/10" />
                         </div>
                       )}
-                      <div className={`p-4 rounded-full transition-colors ${formData.projectScope === label ? 'bg-brand-primary text-white' : 'bg-white text-brand-primary border border-[#e8dfd8] group-hover:bg-brand-primary group-hover:text-white group-hover:border-transparent'
+                      <div className={`p-4 rounded-full transition-colors ${formData.projectScope.includes(label) ? 'bg-brand-primary text-white' : 'bg-white text-brand-primary border border-[#e8dfd8] group-hover:bg-brand-primary group-hover:text-white group-hover:border-transparent'
                         }`}>
                         <Icon className="w-7 h-7" strokeWidth={1.5} />
                       </div>
-                      <span className={`font-body tracking-wide text-sm sm:text-base ${formData.projectScope === label ? 'text-brand-primary font-semibold' : 'text-brand-dark'}`}>
+                      <span className={`font-body tracking-wide text-sm sm:text-base ${formData.projectScope.includes(label) ? 'text-brand-primary font-semibold' : 'text-brand-dark'}`}>
                         {label}
                       </span>
                     </button>
                   ))}
                 </div>
 
-                {formData.projectScope === 'Other' && (
+                {formData.projectScope.includes('Other') && (
                   <div className="mt-12 pt-10 border-t border-[#e8dfd8] animate-in fade-in slide-in-from-top-4 duration-500 max-w-xl mx-auto w-full">
                     <label className="block text-sm font-body tracking-wide text-brand-dark mb-4 text-center">Please specify your requirements</label>
                     <input
@@ -190,13 +229,13 @@ export default function GetStarted() {
                         Please specify what else you want remodeled.
                       </p>
                     )}
-                    <div className="flex justify-center">
-                      <Button type="button" onClick={handleStep1Next} className="rounded-full text-lg py-4 px-12 shadow-lg">
-                        Continue <ChevronRight className="w-5 h-5 ml-2" />
-                      </Button>
-                    </div>
                   </div>
                 )}
+                <div className="mt-12 flex justify-center w-full">
+                  <Button type="button" onClick={handleStep1Next} className="rounded-full text-lg py-4 px-12 shadow-lg">
+                    Continue <ChevronRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </div>
               </div>
             )}
 
