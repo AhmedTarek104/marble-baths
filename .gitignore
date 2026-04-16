@@ -3,4 +3,3 @@ node_modules
 .env.local
 .env
 leads.db
-node_modules
